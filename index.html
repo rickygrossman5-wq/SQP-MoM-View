@@ -229,18 +229,24 @@
   .hero-chip { font-size: 11.5px; font-family: var(--sans); font-weight: 500; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--border); background: var(--page); color: var(--ink-2); cursor: pointer; user-select: none; transition: color .12s, border-color .12s, background .12s; }
   .hero-chip:hover { color: var(--white); border-color: rgba(255,255,255,.3); }
   .hero-chip.active { background: var(--accent); color: var(--black); border-color: var(--accent); font-weight: 600; }
-  .picker-list { display: flex; flex-direction: column; gap: 1px; max-height: 300px; overflow-y: auto; border-top: 1px solid var(--grid); }
+  .picker-list { display: flex; flex-direction: column; gap: 1px; max-height: 380px; overflow-y: auto; border-top: 1px solid var(--grid); }
   .picker-row { display: flex; align-items: center; gap: 8px; padding: 5px 4px; font-size: 12px; border-bottom: 1px solid var(--grid); }
   .picker-row:hover { background: var(--accent-wash); }
+  .picker-row.exact-row { background: var(--accent-wash); }
+  .picker-row.exact-row:hover { background: var(--accent-wash-2); }
   .picker-row input { width: 14px; height: 14px; accent-color: var(--accent-text); flex: 0 0 auto; cursor: pointer; }
   .picker-row .p-rank { flex: 0 0 20px; color: var(--ink-muted); font-size: 10.5px; text-align: right; font-variant-numeric: tabular-nums; }
   .picker-row .p-name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink-1); }
   .picker-row .p-name .p-months { color: var(--ink-muted); font-size: 10px; margin-left: 5px; }
+  .picker-row .p-name mark { background: var(--peak); color: var(--black); border-radius: 2px; padding: 0 1px; font-weight: 600; }
+  .picker-row .exact-badge { flex: 0 0 auto; font-size: 8.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--accent-text); background: var(--accent-wash-2); padding: 1px 5px; border-radius: 4px; margin-left: 6px; }
   .picker-row .p-val { flex: 0 0 auto; font-variant-numeric: tabular-nums; font-weight: 600; color: var(--ink-1); min-width: 56px; text-align: right; }
   .picker-row .p-growth { flex: 0 0 auto; font-variant-numeric: tabular-nums; font-size: 10.5px; min-width: 50px; text-align: right; }
   .picker-row .p-growth.up { color: var(--success-dark); }
   .picker-row .p-growth.down { color: var(--critical); }
   .picker-empty { padding: 16px; text-align: center; color: var(--ink-muted); font-size: 12px; }
+  .picker-divider { padding: 6px 4px 3px; font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-muted); border-bottom: 1px solid var(--grid); }
+  .picker-more-note { padding: 8px 4px 2px; font-size: 10.5px; color: var(--ink-muted); text-align: center; }
 
   .chart-card-hdr { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 18px; margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--grid); }
   .chart-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; margin-bottom: 0; font-size: 12.5px; color: var(--ink-2); }
@@ -859,6 +865,7 @@ var SEED_BRANDS = [{"slug":"pro-supps","name":"Pro Supps","heroKeywords":["Hyde 
       '<input id="searchInput" type="text" placeholder="Search keywords" autocomplete="off">' +
       '<button class="clear-btn" id="clearSearch">&times;</button>' +
       '</div><div class="search-hint">Comma-separate multiple terms to match any of them</div></div>' +
+      '<label class="toggle-wrap"><input type="checkbox" id="exactOnlyToggle">Exact match only</label>' +
       '<label class="toggle-wrap"><input type="checkbox" id="minMonthsToggle" checked>3+ months of data</label>' +
       '<div class="count-note" id="countNote"></div>' +
       '</div>' +
@@ -866,7 +873,7 @@ var SEED_BRANDS = [{"slug":"pro-supps","name":"Pro Supps","heroKeywords":["Hyde 
       '<div id="chartTop"></div>' +
       '<div class="picker-card">' +
       '<div class="picker-hdr"><span>Find keywords to chart <button type="button" id="editHeroBtn" class="edit-hero-btn" title="Edit quick-filter chips"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button></span>' +
-      '<div class="field"><label for="pickerRankBy">Rank by</label><select id="pickerRankBy"><option value="vol">Search volume</option><option value="current">Current value</option><option value="growth">Share growth (first &rarr; last month)</option></select></div>' +
+      '<div class="field"><label for="pickerRankBy">Rank by</label><select id="pickerRankBy"><option value="vol">Search volume</option><option value="current">Current value</option><option value="growth">Share growth (first &rarr; last month)</option><option value="az">Keyword (A &rarr; Z)</option></select></div>' +
       '</div>' +
       '<div class="picker-chips" id="heroChips"></div>' +
       '<div class="picker-list" id="pickerList"></div>' +
@@ -889,7 +896,7 @@ var SEED_BRANDS = [{"slug":"pro-supps","name":"Pro Supps","heroKeywords":["Hyde 
       { key: 'i', label: 'Impression Share', fmt: 'pct', axis: 'pct' },
       { key: 'c', label: 'Click Share', fmt: 'pct', axis: 'pct' },
       { key: 'p', label: 'Purchase Share', fmt: 'pct', axis: 'pct' },
-      { key: 'pt', label: 'Total Purchases', fmt: 'int', axis: 'count' }
+      { key: 'pb', label: 'Brand Purchases', fmt: 'int', axis: 'count' }
     ];
 
     var state = {
@@ -897,6 +904,7 @@ var SEED_BRANDS = [{"slug":"pro-supps","name":"Pro Supps","heroKeywords":["Hyde 
       primaryMetric: 'p',
       searchRaw: '',
       searchTerms: [],
+      exactOnly: false,
       minMonths: true,
       selected: new Set(),
       topN: 6,
@@ -965,6 +973,11 @@ var SEED_BRANDS = [{"slug":"pro-supps","name":"Pro Supps","heroKeywords":["Hyde 
       computeAndRender();
     });
 
+    container.querySelector('#exactOnlyToggle').addEventListener('change', function (e) {
+      state.exactOnly = e.target.checked;
+      computeAndRender();
+    });
+
     var editHeroBtn = container.querySelector('#editHeroBtn');
     if (editHeroBtn) editHeroBtn.addEventListener('click', function () {
       var current = HERO_KEYWORDS.join(', ');
@@ -989,7 +1002,7 @@ var SEED_BRANDS = [{"slug":"pro-supps","name":"Pro Supps","heroKeywords":["Hyde 
       if (metric === 'i') return cell[1] > 0 ? (cell[2] / cell[1]) * 100 : null;
       if (metric === 'c') return cell[3] > 0 ? (cell[4] / cell[3]) * 100 : null;
       if (metric === 'p') return cell[5] > 0 ? (cell[6] / cell[5]) * 100 : null;
-      if (metric === 'pt') return cell[5];
+      if (metric === 'pb') return cell[6];
       return null;
     }
 
@@ -999,7 +1012,10 @@ var SEED_BRANDS = [{"slug":"pro-supps","name":"Pro Supps","heroKeywords":["Hyde 
       var metric = state.primaryMetric;
 
       var rows = DATA.rows;
-      if (state.searchTerms.length) rows = rows.filter(function (r) { return state.searchTerms.some(function (t) { return r._norm.indexOf(t) !== -1; }); });
+      if (state.searchTerms.length) {
+        if (state.exactOnly) rows = rows.filter(function (r) { return state.searchTerms.indexOf(r._norm) !== -1; });
+        else rows = rows.filter(function (r) { return state.searchTerms.some(function (t) { return r._norm.indexOf(t) !== -1; }); });
+      }
       if (state.minMonths) rows = rows.filter(function (r) { return r.n >= 3; });
 
       var entries = rows.map(function (r) { return { r: r }; });
@@ -1034,7 +1050,7 @@ var SEED_BRANDS = [{"slug":"pro-supps","name":"Pro Supps","heroKeywords":["Hyde 
       if (metric === 'i') return sIT > 0 ? (sIB / sIT) * 100 : null;
       if (metric === 'c') return sCT > 0 ? (sCB / sCT) * 100 : null;
       if (metric === 'p') return sPT > 0 ? (sPB / sPT) * 100 : null;
-      if (metric === 'pt') return sPT;
+      if (metric === 'pb') return sPB;
       return null;
     }
 
@@ -1122,7 +1138,7 @@ var SEED_BRANDS = [{"slug":"pro-supps","name":"Pro Supps","heroKeywords":["Hyde 
       return vals[lastIdx] - vals[firstIdx];
     }
 
-    var METRIC_COLOR = { v: 'rgba(240,240,235,.32)', i: 'var(--series-0)', c: 'var(--series-3)', p: 'var(--accent-text)', pt: 'var(--series-6)' };
+    var METRIC_COLOR = { v: 'rgba(240,240,235,.32)', i: 'var(--series-0)', c: 'var(--series-3)', p: 'var(--accent-text)', pb: 'var(--series-6)' };
 
     function pctNiceCeil(max) {
       var steps = [1, 2, 5, 10, 15, 20, 25, 30, 40, 50, 75, 100];
@@ -1373,50 +1389,120 @@ var SEED_BRANDS = [{"slug":"pro-supps","name":"Pro Supps","heroKeywords":["Hyde 
       var metric = state.primaryMetric;
       var fmt = METRICS.filter(function (m) { return m.key === metric; })[0].fmt;
 
+      var rawTerms = state.searchRaw.split(',').map(function (t) { return t.trim(); }).filter(Boolean);
+
       var ranked = entries.map(function (e) {
         var r = e.r;
         var vals = DATA.months.map(function (_, mi) { return deriveValue(r.c[mi], metric); });
         var li = lastNonNullIdx(vals);
         var current = li >= 0 ? vals[li] : null;
         var growth = growthForMetric(r, metric);
-        return { r: r, current: current, growth: growth };
+        var isExact = state.searchTerms.length > 0 && state.searchTerms.indexOf(r._norm) !== -1;
+        return { r: r, current: current, growth: growth, isExact: isExact };
       });
 
       var sortFn;
       if (state.pickerRankBy === 'current') sortFn = function (a, b) { return (b.current == null ? -Infinity : b.current) - (a.current == null ? -Infinity : a.current); };
       else if (state.pickerRankBy === 'growth') sortFn = function (a, b) { return (b.growth == null ? -Infinity : b.growth) - (a.growth == null ? -Infinity : a.growth); };
+      else if (state.pickerRankBy === 'az') sortFn = function (a, b) { return a.r.k.localeCompare(b.r.k); };
       else sortFn = function (a, b) { return b.r._totalVol - a.r._totalVol; };
       ranked.sort(sortFn);
 
-      var top = ranked.slice(0, 15);
       listEl.innerHTML = '';
-      if (top.length === 0) {
+      if (ranked.length === 0) {
         listEl.innerHTML = '<div class="picker-empty">No keywords match \u2014 try a hero chip or a broader search.</div>';
         return;
       }
-      top.forEach(function (item, i) {
-        var row = document.createElement('div');
-        row.className = 'picker-row';
-        var chk = document.createElement('input');
-        chk.type = 'checkbox';
-        chk.checked = state.selected.has(item.r.k);
-        chk.addEventListener('change', function () {
-          if (chk.checked) state.selected.add(item.r.k); else state.selected.delete(item.r.k);
-          computeAndRender();
+
+      var CAP = 100;
+      var showExactSection = state.searchTerms.length > 0 && !state.exactOnly;
+      var sections, truncatedCount;
+      if (showExactSection) {
+        var exactGroup = ranked.filter(function (it) { return it.isExact; });
+        var restGroup = ranked.filter(function (it) { return !it.isExact; });
+        if (exactGroup.length) {
+          var remainingCap = Math.max(0, CAP - exactGroup.length);
+          var visibleRest = restGroup.slice(0, remainingCap);
+          truncatedCount = restGroup.length - visibleRest.length;
+          sections = [
+            { label: 'Exact match', items: exactGroup },
+            { label: visibleRest.length ? 'All matches' : null, items: visibleRest }
+          ];
+        } else {
+          var visibleAll = restGroup.slice(0, CAP);
+          truncatedCount = restGroup.length - visibleAll.length;
+          sections = [{ label: null, items: visibleAll }];
+        }
+      } else {
+        var visible = ranked.slice(0, CAP);
+        truncatedCount = ranked.length - visible.length;
+        sections = [{ label: null, items: visible }];
+      }
+
+      function buildHighlightedName(text) {
+        var frag = document.createDocumentFragment();
+        if (!rawTerms.length) { frag.appendChild(document.createTextNode(text)); return frag; }
+        var terms = rawTerms.slice().sort(function (a, b) { return b.length - a.length; });
+        var pattern = terms.map(function (t) { return t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }).join('|');
+        var re;
+        try { re = new RegExp('(' + pattern + ')', 'ig'); } catch (err) { frag.appendChild(document.createTextNode(text)); return frag; }
+        var lastIndex = 0, m;
+        while ((m = re.exec(text)) !== null) {
+          if (m[0].length === 0) { re.lastIndex++; continue; }
+          if (m.index > lastIndex) frag.appendChild(document.createTextNode(text.slice(lastIndex, m.index)));
+          var mark = document.createElement('mark');
+          mark.textContent = m[0];
+          frag.appendChild(mark);
+          lastIndex = m.index + m[0].length;
+        }
+        if (lastIndex < text.length) frag.appendChild(document.createTextNode(text.slice(lastIndex)));
+        return frag;
+      }
+
+      var rankCounter = 0;
+      sections.forEach(function (section) {
+        if (section.label) {
+          var div = document.createElement('div');
+          div.className = 'picker-divider';
+          div.textContent = section.label;
+          listEl.appendChild(div);
+        }
+        section.items.forEach(function (item) {
+          rankCounter++;
+          var row = document.createElement('div');
+          row.className = 'picker-row' + (item.isExact ? ' exact-row' : '');
+          var chk = document.createElement('input');
+          chk.type = 'checkbox';
+          chk.checked = state.selected.has(item.r.k);
+          chk.addEventListener('change', function () {
+            if (chk.checked) state.selected.add(item.r.k); else state.selected.delete(item.r.k);
+            computeAndRender();
+          });
+          var rank = document.createElement('div'); rank.className = 'p-rank'; rank.textContent = rankCounter + '.';
+          var name = document.createElement('div'); name.className = 'p-name';
+          name.appendChild(buildHighlightedName(item.r.k));
+          if (item.isExact) {
+            var badge = document.createElement('span'); badge.className = 'exact-badge'; badge.textContent = 'Exact';
+            name.appendChild(badge);
+          }
+          var monthsSpan = document.createElement('span'); monthsSpan.className = 'p-months'; monthsSpan.textContent = item.r.n + '/' + DATA.months.length + 'mo';
+          name.appendChild(monthsSpan);
+          var val = document.createElement('div'); val.className = 'p-val'; val.textContent = item.current !== null ? fmtVal(item.current, fmt) : '\u2013';
+          var growthEl = document.createElement('div');
+          var gRounded = item.growth === null ? null : (fmt === 'pct' ? Math.round(item.growth * 100) / 100 : Math.round(item.growth));
+          growthEl.className = 'p-growth' + (gRounded === null ? '' : gRounded > 0 ? ' up' : gRounded < 0 ? ' down' : '');
+          growthEl.textContent = gRounded === null ? '' : (gRounded > 0 ? '+' : '') + (fmt === 'pct' ? gRounded.toFixed(2) + 'pt' : gRounded.toLocaleString());
+          row.appendChild(chk); row.appendChild(rank); row.appendChild(name); row.appendChild(val); row.appendChild(growthEl);
+          listEl.appendChild(row);
         });
-        var rank = document.createElement('div'); rank.className = 'p-rank'; rank.textContent = (i + 1) + '.';
-        var name = document.createElement('div'); name.className = 'p-name';
-        name.textContent = item.r.k;
-        var monthsSpan = document.createElement('span'); monthsSpan.className = 'p-months'; monthsSpan.textContent = item.r.n + '/' + DATA.months.length + 'mo';
-        name.appendChild(monthsSpan);
-        var val = document.createElement('div'); val.className = 'p-val'; val.textContent = item.current !== null ? fmtVal(item.current, fmt) : '\u2013';
-        var growthEl = document.createElement('div');
-        var gRounded = item.growth === null ? null : (fmt === 'pct' ? Math.round(item.growth * 100) / 100 : Math.round(item.growth));
-        growthEl.className = 'p-growth' + (gRounded === null ? '' : gRounded > 0 ? ' up' : gRounded < 0 ? ' down' : '');
-        growthEl.textContent = gRounded === null ? '' : (gRounded > 0 ? '+' : '') + (fmt === 'pct' ? gRounded.toFixed(2) + 'pt' : gRounded.toLocaleString());
-        row.appendChild(chk); row.appendChild(rank); row.appendChild(name); row.appendChild(val); row.appendChild(growthEl);
-        listEl.appendChild(row);
       });
+
+      if (truncatedCount > 0) {
+        var more = document.createElement('div');
+        more.className = 'picker-more-note';
+        more.textContent = '+' + truncatedCount.toLocaleString() + ' more match' + (truncatedCount === 1 ? '' : 'es') + ' \u2014 narrow your search or turn on Exact match only to see a specific keyword';
+        listEl.appendChild(more);
+      }
     }
 
     computeAndRender();
