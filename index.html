@@ -336,6 +336,69 @@
   ::-webkit-scrollbar-thumb { background: var(--baseline); border-radius: 6px; }
   ::-webkit-scrollbar-track { background: transparent; }
   .warn-icon { flex: 0 0 auto; }
+
+  /* ---------- Manage Page / GitHub publish ---------- */
+  .manage-btn { display: flex; align-items: center; gap: 6px; }
+  .modal-overlay {
+    position: fixed; inset: 0; z-index: 100; background: rgba(0,0,0,.6);
+    display: flex; align-items: center; justify-content: center; padding: 24px;
+  }
+  .modal-card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    width: 100%; max-width: 620px; max-height: calc(100vh - 48px); overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0,0,0,.5);
+  }
+  .modal-hdr { display: flex; align-items: flex-start; justify-content: space-between; padding: 20px 22px 0; }
+  .modal-eyebrow { font-family: var(--mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--gray-dim); margin-bottom: 4px; }
+  .modal-title { font-family: var(--sans); font-size: 20px; font-weight: 700; color: var(--white); }
+  .modal-close {
+    width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--line); background: none;
+    color: var(--gray); cursor: pointer; display: flex; align-items: center; justify-content: center; flex: 0 0 auto;
+  }
+  .modal-close:hover { color: var(--white); border-color: rgba(255,255,255,.35); }
+  .modal-tabs { display: flex; gap: 4px; padding: 16px 22px 0; border-bottom: 1px solid var(--line); }
+  .modal-tab {
+    font-family: var(--sans); font-size: 12.5px; font-weight: 600; color: var(--gray);
+    background: none; border: none; padding: 8px 14px; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px;
+  }
+  .modal-tab:hover { color: var(--white); }
+  .modal-tab.active { color: var(--white); border-bottom-color: var(--green); }
+  .modal-body { padding: 20px 22px 22px; }
+  .modal-section-label { font-family: var(--mono); font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--gray-dim); margin: 0 0 8px; }
+  .modal-hr { border: none; border-top: 1px solid var(--line-soft); margin: 18px 0; }
+  .status-row { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--white); margin-bottom: 10px; }
+  .status-dot { width: 8px; height: 8px; border-radius: 50%; flex: 0 0 auto; background: var(--gray-dim); }
+  .status-dot.ok { background: var(--green); }
+  .status-dot.busy { background: #E8C840; animation: statusPulse 1s ease-in-out infinite; }
+  .status-dot.err { background: var(--red); }
+  @keyframes statusPulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+  .modal-copy { font-size: 12.5px; color: var(--gray); line-height: 1.55; margin-bottom: 14px; }
+  .modal-copy b { color: var(--white); }
+  .pushing-to-box { background: var(--ink); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; margin-bottom: 14px; }
+  .pushing-to-box .ptb-name { font-family: var(--sans); font-size: 14px; font-weight: 600; color: var(--white); margin-top: 2px; }
+  .pushing-to-box .ptb-path { font-family: var(--mono); font-size: 11px; color: var(--gray-dim); margin-top: 2px; }
+  .modal-field { margin-bottom: 12px; }
+  .modal-field label { display: block; font-size: 11.5px; font-weight: 600; color: var(--gray); margin-bottom: 5px; }
+  .modal-field input {
+    width: 100%; font-family: var(--sans); font-size: 12.5px; padding: 8px 11px;
+    border: 1px solid var(--line); border-radius: 8px; background: var(--ink); color: var(--white); outline: none;
+  }
+  .modal-field input:focus { border-color: rgba(255,255,255,.4); }
+  .modal-field .field-hint { font-size: 10.5px; color: var(--gray-dim); margin-top: 4px; }
+  .modal-row2 { display: flex; gap: 10px; }
+  .modal-row2 > .modal-field { flex: 1 1 0; }
+  .modal-actions { display: flex; align-items: center; gap: 10px; margin-top: 4px; }
+  .push-log { margin-top: 14px; font-family: var(--mono); font-size: 10.5px; color: var(--gray-dim); background: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; max-height: 140px; overflow-y: auto; display: none; }
+  .push-log.visible { display: block; }
+  .push-log div { padding: 1px 0; }
+  .push-log .lg-err { color: var(--red); }
+  .push-log .lg-ok { color: var(--green); }
+  .upload-drop {
+    border: 1px dashed var(--line); border-radius: 10px; padding: 16px; text-align: center;
+    cursor: pointer; background: var(--ink); font-size: 12px; color: var(--gray);
+  }
+  .upload-drop:hover { border-color: rgba(255,255,255,.3); color: var(--white); }
+  .security-note { font-size: 11px; color: var(--gray-dim); line-height: 1.5; margin-top: 14px; }
 </style>
 </head>
 <body>
@@ -633,10 +696,369 @@ var SEED_BRANDS = [{"slug":"pro-supps","name":"Pro Supps","heroKeywords":["Hyde 
   }
 
   // ============================================================
+  // Manage Page / Push to GitHub
+  //
+  // Lets anyone with a GitHub token for this repo publish the app's
+  // current live state (every brand currently in this browser's
+  // IndexedDB) straight to GitHub, so GitHub Pages redeploys and the
+  // whole team sees the update. Two paths:
+  //   1. "Push to GitHub" — rebuilds the embedded SEED_BRANDS block from
+  //      whatever is currently in IndexedDB (including brands/months
+  //      added via in-app upload since the last push) and splices it
+  //      into a fresh copy of the file's current source fetched from
+  //      GitHub, so any other manual edits already on GitHub are kept.
+  //   2. "Upload & Push" — pushes a locally chosen file's exact bytes
+  //      as-is (e.g. a new app.html a fresh Claude session just handed
+  //      you) with no splicing, for when the app's own code changed.
+  //
+  // Uses the Git Data API (blobs/trees/commits/refs), not the simpler
+  // Contents API, because the Contents API's convenience read/write
+  // path is capped around 1MB and this file is already several MB —
+  // the Git Data API handles arbitrarily large files.
+  //
+  // The GitHub token is stored only in this browser's localStorage and
+  // is sent only to api.github.com — never to Claude or anywhere else.
+  // ============================================================
+  var GITHUB_CFG_KEY = 'sqpTrackerGithubCfg';
+
+  function loadGithubConfig() {
+    try {
+      var raw = localStorage.getItem(GITHUB_CFG_KEY);
+      if (!raw) return { owner: '', repo: '', branch: 'main', path: 'index.html', token: '' };
+      var cfg = JSON.parse(raw);
+      return {
+        owner: cfg.owner || '', repo: cfg.repo || '',
+        branch: cfg.branch || 'main', path: cfg.path || 'index.html',
+        token: cfg.token || ''
+      };
+    } catch (e) { return { owner: '', repo: '', branch: 'main', path: 'index.html', token: '' }; }
+  }
+
+  function saveGithubConfig(cfg) {
+    localStorage.setItem(GITHUB_CFG_KEY, JSON.stringify(cfg));
+  }
+
+  function utf8ToBase64(str) {
+    var bytes = new TextEncoder().encode(str);
+    var binary = '';
+    var CHUNK = 0x8000;
+    for (var i = 0; i < bytes.length; i += CHUNK) {
+      binary += String.fromCharCode.apply(null, bytes.subarray(i, i + CHUNK));
+    }
+    return btoa(binary);
+  }
+
+  function base64ToUtf8(b64) {
+    var binary = atob(b64.replace(/\n/g, ''));
+    var bytes = new Uint8Array(binary.length);
+    for (var i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return new TextDecoder('utf-8').decode(bytes);
+  }
+
+  function githubHeaders(cfg) {
+    return {
+      'Authorization': 'Bearer ' + cfg.token,
+      'Accept': 'application/vnd.github+json',
+      'X-GitHub-Api-Version': '2022-11-28'
+    };
+  }
+
+  async function githubRequest(cfg, method, path, body) {
+    var res = await fetch('https://api.github.com' + path, {
+      method: method,
+      headers: Object.assign({}, githubHeaders(cfg), body ? { 'Content-Type': 'application/json' } : {}),
+      body: body ? JSON.stringify(body) : undefined
+    });
+    var data = null;
+    try { data = await res.json(); } catch (e) { /* no body */ }
+    if (!res.ok) {
+      var msg = (data && data.message) ? data.message : (res.status + ' ' + res.statusText);
+      var err = new Error(msg);
+      err.status = res.status;
+      throw err;
+    }
+    return data;
+  }
+
+  // Collects every brand currently in IndexedDB into the same shape
+  // used by the embedded SEED_BRANDS array.
+  async function collectAllBrandsForExport() {
+    var metas = await loadBrandList();
+    var out = [];
+    for (var i = 0; i < metas.length; i++) {
+      var m = metas[i];
+      var dataRec = await idbGet('data', m.slug);
+      var rows = (dataRec && Array.isArray(dataRec.rows)) ? dataRec.rows : [];
+      out.push({
+        slug: m.slug,
+        name: m.name,
+        heroKeywords: m.heroKeywords || [],
+        dataset: {
+          months: m.months || [], monthLabels: m.monthLabels || [],
+          missingMonths: m.missingMonths || [], rows: rows
+        }
+      });
+    }
+    return out;
+  }
+
+  function spliceSeedBrands(sourceText, brands) {
+    var marker = 'var SEED_BRANDS = ';
+    var start = sourceText.indexOf(marker);
+    if (start === -1) throw new Error('Could not find the SEED_BRANDS block in the file fetched from GitHub — is this the right file/path?');
+    var afterMarker = start + marker.length;
+    var end = sourceText.indexOf(';\n<\/script>', afterMarker);
+    if (end === -1) throw new Error('Could not find the end of the SEED_BRANDS block in the file fetched from GitHub.');
+    var newJson = JSON.stringify(brands);
+    return sourceText.slice(0, afterMarker) + newJson + sourceText.slice(end);
+  }
+
+  // Fetches the latest commit + tree for the configured branch.
+  async function getRepoHead(cfg) {
+    var ref = await githubRequest(cfg, 'GET', '/repos/' + cfg.owner + '/' + cfg.repo + '/git/ref/heads/' + encodeURIComponent(cfg.branch));
+    var commitSha = ref.object.sha;
+    var commit = await githubRequest(cfg, 'GET', '/repos/' + cfg.owner + '/' + cfg.repo + '/git/commits/' + commitSha);
+    return { commitSha: commitSha, treeSha: commit.tree.sha };
+  }
+
+  // Reads the current text content of cfg.path via the Git Data API
+  // (works regardless of file size, unlike the Contents API's ~1MB cap).
+  async function fetchCurrentFileText(cfg) {
+    var meta = await githubRequest(cfg, 'GET', '/repos/' + cfg.owner + '/' + cfg.repo + '/contents/' + cfg.path + '?ref=' + encodeURIComponent(cfg.branch));
+    var blobSha = meta.sha;
+    var blob = await githubRequest(cfg, 'GET', '/repos/' + cfg.owner + '/' + cfg.repo + '/git/blobs/' + blobSha);
+    return base64ToUtf8(blob.content);
+  }
+
+  // Commits newText as the new content of cfg.path, moving the branch
+  // ref forward. head is {commitSha, treeSha} from getRepoHead().
+  async function commitFileText(cfg, head, newText, message) {
+    var blob = await githubRequest(cfg, 'POST', '/repos/' + cfg.owner + '/' + cfg.repo + '/git/blobs', {
+      content: utf8ToBase64(newText), encoding: 'base64'
+    });
+    var tree = await githubRequest(cfg, 'POST', '/repos/' + cfg.owner + '/' + cfg.repo + '/git/trees', {
+      base_tree: head.treeSha,
+      tree: [{ path: cfg.path, mode: '100644', type: 'blob', sha: blob.sha }]
+    });
+    var commit = await githubRequest(cfg, 'POST', '/repos/' + cfg.owner + '/' + cfg.repo + '/git/commits', {
+      message: message, tree: tree.sha, parents: [head.commitSha]
+    });
+    await githubRequest(cfg, 'PATCH', '/repos/' + cfg.owner + '/' + cfg.repo + '/git/refs/heads/' + encodeURIComponent(cfg.branch), {
+      sha: commit.sha
+    });
+    return commit.sha;
+  }
+
+  function validateGithubConfig(cfg) {
+    var missing = [];
+    if (!cfg.owner) missing.push('owner');
+    if (!cfg.repo) missing.push('repo');
+    if (!cfg.branch) missing.push('branch');
+    if (!cfg.path) missing.push('file path');
+    if (!cfg.token) missing.push('token');
+    if (missing.length) return 'Fill in your ' + missing.join(', ') + ' in the Settings tab first.';
+    return null;
+  }
+
+  var MANAGE_BTN_HTML = '<button type="button" class="nav-btn manage-btn" id="manageBtn">' +
+    '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v13"/><path d="m8 11 4 4 4-4"/><path d="M20 21H4"/></svg>' +
+    'Manage Page</button>';
+
+  function wireManageBtn() {
+    var btn = document.getElementById('manageBtn');
+    if (btn) btn.addEventListener('click', openManageModal);
+  }
+
+  function manageModalTemplate(cfg) {
+    return (
+      '<div class="modal-overlay" id="manageOverlay">' +
+      '<div class="modal-card">' +
+      '<div class="modal-hdr"><div><div class="modal-eyebrow">Page manager</div><div class="modal-title">Manage Page</div></div>' +
+      '<button type="button" class="modal-close" id="manageClose">&times;</button></div>' +
+      '<div class="modal-tabs"><button type="button" class="modal-tab active" data-tab="publish">Publish</button><button type="button" class="modal-tab" data-tab="settings">Settings</button></div>' +
+      '<div class="modal-body" id="manageBody"></div>' +
+      '</div></div>'
+    );
+  }
+
+  function publishTabTemplate(cfg) {
+    var configured = !validateGithubConfig(cfg);
+    return (
+      '<p class="modal-section-label">Push to GitHub</p>' +
+      (configured
+        ? '<div class="status-row"><span class="status-dot ok" id="pushStatusDot"></span><span id="pushStatusText">Ready to push</span></div>' +
+          '<p class="modal-copy">Click <b>Push to GitHub</b> to save all your changes live. GitHub Pages will rebuild and everyone will see the update within ~30&ndash;60 seconds.</p>' +
+          '<div class="pushing-to-box"><div class="modal-section-label" style="margin-bottom:2px;">Pushing to</div><div class="ptb-name">' + escapeHtml(cfg.owner + ' / ' + cfg.repo) + '</div><div class="ptb-path">' + escapeHtml(cfg.branch) + ' &middot; ' + escapeHtml(cfg.path) + '</div></div>' +
+          '<div class="modal-actions"><button type="button" class="nav-btn primary" id="pushBtn">Push to GitHub</button></div>' +
+          '<div class="push-log" id="pushLog"></div>'
+        : '<div class="status-row"><span class="status-dot" id="pushStatusDot"></span><span id="pushStatusText">Not configured yet</span></div>' +
+          '<p class="modal-copy">Fill in your repo and token in the <b>Settings</b> tab, then come back here to push.</p>') +
+      '<hr class="modal-hr">' +
+      '<p class="modal-section-label">Upload &amp; push</p>' +
+      '<p class="modal-copy">Working in Claude or elsewhere? Download the updated file, then upload it here to push it straight to GitHub &mdash; no manual repo visit needed.</p>' +
+      '<div class="upload-drop" id="uploadDrop">Click to choose a file&hellip;</div>' +
+      '<input type="file" id="uploadFileInput" accept=".html" style="display:none;">' +
+      '<div class="push-log" id="uploadLog"></div>' +
+      '<p class="security-note">Your token is stored only in this browser &mdash; never sent anywhere except GitHub.</p>'
+    );
+  }
+
+  function settingsTabTemplate(cfg) {
+    return (
+      '<p class="modal-section-label">GitHub connection</p>' +
+      '<div class="modal-row2">' +
+      '<div class="modal-field"><label for="cfgOwner">Owner / org</label><input type="text" id="cfgOwner" value="' + escapeHtml(cfg.owner) + '" placeholder="e.g. rickygrossman5"></div>' +
+      '<div class="modal-field"><label for="cfgRepo">Repository</label><input type="text" id="cfgRepo" value="' + escapeHtml(cfg.repo) + '" placeholder="e.g. sqp-keyword-tracker"></div>' +
+      '</div>' +
+      '<div class="modal-row2">' +
+      '<div class="modal-field"><label for="cfgBranch">Branch</label><input type="text" id="cfgBranch" value="' + escapeHtml(cfg.branch) + '" placeholder="main"></div>' +
+      '<div class="modal-field"><label for="cfgPath">File path</label><input type="text" id="cfgPath" value="' + escapeHtml(cfg.path) + '" placeholder="index.html"></div>' +
+      '</div>' +
+      '<div class="modal-field"><label for="cfgToken">Personal access token</label><input type="password" id="cfgToken" value="' + escapeHtml(cfg.token) + '" placeholder="ghp_&hellip; or github_pat_&hellip;">' +
+      '<div class="field-hint">Fine-grained token scoped to just this repo, with Contents: Read and write. Generate one under GitHub → Settings → Developer settings → Personal access tokens.</div></div>' +
+      '<div class="modal-actions"><button type="button" class="nav-btn primary" id="cfgSaveBtn">Save settings</button><span id="cfgSavedNote" style="font-size:11.5px;color:var(--green);display:none;">Saved</span></div>' +
+      '<p class="security-note">Stored only in this browser’s local storage &mdash; never sent anywhere except GitHub, and never to Claude.</p>'
+    );
+  }
+
+  function pushLog(el, text, cls) {
+    if (!el) return;
+    el.classList.add('visible');
+    var line = document.createElement('div');
+    if (cls) line.className = cls;
+    line.textContent = text;
+    el.appendChild(line);
+    el.scrollTop = el.scrollHeight;
+  }
+
+  function setPushStatus(state, text) {
+    var dot = document.getElementById('pushStatusDot');
+    var label = document.getElementById('pushStatusText');
+    if (dot) dot.className = 'status-dot' + (state ? ' ' + state : '');
+    if (label) label.textContent = text;
+  }
+
+  function openManageModal() {
+    if (document.getElementById('manageOverlay')) return;
+    var cfg = loadGithubConfig();
+    var wrap = document.createElement('div');
+    wrap.innerHTML = manageModalTemplate(cfg);
+    var overlay = wrap.firstElementChild;
+    document.body.appendChild(overlay);
+
+    function renderTab(tab) {
+      overlay.querySelectorAll('.modal-tab').forEach(function (b) { b.classList.toggle('active', b.dataset.tab === tab); });
+      var body = overlay.querySelector('#manageBody');
+      var freshCfg = loadGithubConfig();
+      if (tab === 'settings') { body.innerHTML = settingsTabTemplate(freshCfg); wireSettingsTab(); }
+      else { body.innerHTML = publishTabTemplate(freshCfg); wirePublishTab(freshCfg); }
+    }
+
+    overlay.querySelectorAll('.modal-tab').forEach(function (b) {
+      b.addEventListener('click', function () { renderTab(b.dataset.tab); });
+    });
+    overlay.querySelector('#manageClose').addEventListener('click', closeManageModal);
+    overlay.addEventListener('click', function (e) { if (e.target === overlay) closeManageModal(); });
+
+    function wireSettingsTab() {
+      overlay.querySelector('#cfgSaveBtn').addEventListener('click', function () {
+        var newCfg = {
+          owner: overlay.querySelector('#cfgOwner').value.trim(),
+          repo: overlay.querySelector('#cfgRepo').value.trim(),
+          branch: overlay.querySelector('#cfgBranch').value.trim() || 'main',
+          path: overlay.querySelector('#cfgPath').value.trim() || 'index.html',
+          token: overlay.querySelector('#cfgToken').value.trim()
+        };
+        saveGithubConfig(newCfg);
+        var note = overlay.querySelector('#cfgSavedNote');
+        note.style.display = 'inline';
+        setTimeout(function () { note.style.display = 'none'; }, 1800);
+      });
+    }
+
+    function wirePublishTab(cfg) {
+      var pushBtn = overlay.querySelector('#pushBtn');
+      if (pushBtn) pushBtn.addEventListener('click', function () { runPush(cfg); });
+
+      var dropEl = overlay.querySelector('#uploadDrop');
+      var fileInput = overlay.querySelector('#uploadFileInput');
+      if (dropEl && fileInput) {
+        dropEl.addEventListener('click', function () { fileInput.click(); });
+        fileInput.addEventListener('change', function () {
+          if (fileInput.files && fileInput.files[0]) runUploadAndPush(cfg, fileInput.files[0]);
+        });
+      }
+    }
+
+    async function runPush(cfg) {
+      var err = validateGithubConfig(cfg);
+      var logEl = overlay.querySelector('#pushLog');
+      var pushBtn = overlay.querySelector('#pushBtn');
+      if (err) { setPushStatus('err', err); return; }
+      pushBtn.disabled = true;
+      logEl.innerHTML = ''; logEl.classList.add('visible');
+      try {
+        setPushStatus('busy', 'Fetching current file from GitHub…');
+        pushLog(logEl, 'Fetching current file from GitHub…');
+        var head = await getRepoHead(cfg);
+        var currentText = await fetchCurrentFileText(cfg);
+
+        setPushStatus('busy', 'Reading brand data from this browser…');
+        pushLog(logEl, 'Reading brand data from this browser…');
+        var brands = await collectAllBrandsForExport();
+        pushLog(logEl, 'Found ' + brands.length + ' brand' + (brands.length === 1 ? '' : 's') + ' to publish.');
+
+        setPushStatus('busy', 'Building updated file…');
+        var newText = spliceSeedBrands(currentText, brands);
+
+        setPushStatus('busy', 'Committing to GitHub…');
+        pushLog(logEl, 'Committing to GitHub…');
+        var msg = 'Publish from SQP Tracker (' + brands.length + ' brand' + (brands.length === 1 ? '' : 's') + ', ' + new Date().toISOString().slice(0, 10) + ')';
+        await commitFileText(cfg, head, newText, msg);
+
+        setPushStatus('ok', 'Pushed! Live in ~30–60 seconds.');
+        pushLog(logEl, 'Done — GitHub Pages is rebuilding.', 'lg-ok');
+      } catch (e) {
+        setPushStatus('err', 'Push failed');
+        pushLog(logEl, (e && e.message) ? e.message : String(e), 'lg-err');
+      } finally {
+        pushBtn.disabled = false;
+      }
+    }
+
+    async function runUploadAndPush(cfg, file) {
+      var logEl = overlay.querySelector('#uploadLog');
+      logEl.innerHTML = ''; logEl.classList.add('visible');
+      var err = validateGithubConfig(cfg);
+      if (err) { pushLog(logEl, err, 'lg-err'); return; }
+      try {
+        pushLog(logEl, 'Reading ' + file.name + '…');
+        var text = await file.text();
+        pushLog(logEl, 'Fetching current repo state…');
+        var head = await getRepoHead(cfg);
+        pushLog(logEl, 'Committing to GitHub…');
+        var msg = 'Publish ' + file.name + ' from SQP Tracker (' + new Date().toISOString().slice(0, 10) + ')';
+        await commitFileText(cfg, head, text, msg);
+        pushLog(logEl, 'Done — GitHub Pages is rebuilding.', 'lg-ok');
+      } catch (e) {
+        pushLog(logEl, (e && e.message) ? e.message : String(e), 'lg-err');
+      }
+    }
+
+    renderTab('publish');
+  }
+
+  function closeManageModal() {
+    var overlay = document.getElementById('manageOverlay');
+    if (overlay) overlay.remove();
+  }
+
+  // ============================================================
   // View: brand list
   // ============================================================
   async function showBrandList() {
-    shellNav.innerHTML = '';
+    shellNav.innerHTML = MANAGE_BTN_HTML;
+    wireManageBtn();
     viewRoot.innerHTML = '<div class="view"><div class="loading-state"><div class="spinner"></div>Loading brands&hellip;</div></div>';
     var brands;
     try { brands = await loadBrandList(); }
@@ -697,7 +1119,8 @@ var SEED_BRANDS = [{"slug":"pro-supps","name":"Pro Supps","heroKeywords":["Hyde 
     var existingBrand = existingSlug ? currentBrands.filter(function (b) { return b.slug === existingSlug; })[0] : null;
     var isNew = !existingSlug;
 
-    shellNav.innerHTML = '<button type="button" class="nav-btn" id="navCancel">Cancel</button>';
+    shellNav.innerHTML = '<button type="button" class="nav-btn" id="navCancel">Cancel</button>' + MANAGE_BTN_HTML;
+    wireManageBtn();
     document.getElementById('navCancel').addEventListener('click', function () {
       existingSlug ? showDashboard(existingSlug) : showBrandList();
     });
@@ -828,8 +1251,9 @@ var SEED_BRANDS = [{"slug":"pro-supps","name":"Pro Supps","heroKeywords":["Hyde 
   // View: dashboard (per brand)
   // ============================================================
   async function showDashboard(slug) {
-    shellNav.innerHTML = '<button type="button" class="nav-btn" id="navBack">&larr; All brands</button>';
+    shellNav.innerHTML = '<button type="button" class="nav-btn" id="navBack">&larr; All brands</button>' + MANAGE_BTN_HTML;
     document.getElementById('navBack').addEventListener('click', showBrandList);
+    wireManageBtn();
     viewRoot.innerHTML = '<div class="view"><div class="loading-state"><div class="spinner"></div>Loading brand data&hellip;</div></div>';
 
     var loaded;
@@ -844,9 +1268,10 @@ var SEED_BRANDS = [{"slug":"pro-supps","name":"Pro Supps","heroKeywords":["Hyde 
     shellNav.innerHTML =
       '<span class="current-brand">' + escapeHtml(meta.name) + '</span>' +
       '<button type="button" class="nav-btn" id="navUpload">Upload more months</button>' +
-      '<button type="button" class="nav-btn" id="navBack">&larr; All brands</button>';
+      '<button type="button" class="nav-btn" id="navBack">&larr; All brands</button>' + MANAGE_BTN_HTML;
     document.getElementById('navBack').addEventListener('click', showBrandList);
     document.getElementById('navUpload').addEventListener('click', function () { showUpload(slug); });
+    wireManageBtn();
 
     var container = document.createElement('div');
     container.className = 'view view-wide';
